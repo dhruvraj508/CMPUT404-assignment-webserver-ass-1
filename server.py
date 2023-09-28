@@ -30,21 +30,48 @@ import os
 
 class MyWebServer(socketserver.BaseRequestHandler):
     
+    def read_file(self, path_requested):
+        with open('./www'+path_requested, 'r') as file:
+            contents = file.read().encode()
+        return contents
+
     def handle(self):
-        self.data = self.request.recv(1024).strip()
-        print ("Got a request of: %s\n" % self.data)
+        self.data = self.request.recv(1024).strip().decode('utf-8')
+        # print ("Got a request of: %s\n" % self.data)
         # self.request.sendall(bytearray("OK",'utf-8'))
         
-        request = self.data.decode().splitlines()[0].split()
-        print(request)
-        request_code = request[0]
+        path  = self.data.split()[1]
+        if path[-1] == '/':
+            path += 'index.html'
 
-        path = os.path.dirname(os.path.abspath(__file__ ))+'/www'+request[1]
+        # check if the requested method is GET, send 405 otherwise. 
+        if self.data.split()[0] == "GET":
+            # checking if the directory path is valid
+            if os.path.exists('./www'+path):
+                # if the file is html
+                if path.endswith('.html'):
+                    self.request.sendall("HTTP/1.1 200 OK\r\n".encode())
+                    content = self.read_file(path)
+                    self.request.sendall(b'Content-Type: text/html\r\n\r\n')
+                    self.request.sendall(content)
+                # if the file is css
+                elif path.endswith('.css'):
+                    self.request.sendall("HTTP/1.1 200 OK\r\n".encode())
+                    content = self.read_file(path)
+                    self.request.sendall(b'Content-Type: text/css\r\n\r\n')
+                    self.request.sendall(content)
+                # if not both, send 301 moved perm request. 
+                else:
+                    self.request.sendall("HTTP/1.1 301 Moved Permanently\r\n".encode())
+                    path += '/'
+                    self.request.sendall(('Location: http://127.0.0.1:8080' + self.data.split()[1] + '\n' ).encode())  
+            # if the path does not exist, send 404 file not found error.
+            else:
+                self.request.sendall("HTTP/1.1 404 File Not Found\r\n".encode())
+        # if the requested method is not GET, we send 405 not allowed
+        else:
+            self.request.sendall('HTTP/1.1 405 Method Not Allowed\r\n\r\n'.encode())
 
-        if request_code != "GET":
-            self.request.sendall("HTTP/1.1 405 Method Not Allowed\n".encode())
-        
-        print(request_code)
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
