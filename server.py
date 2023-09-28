@@ -62,12 +62,11 @@ class MyWebServer(socketserver.BaseRequestHandler):
                     self.request.sendall(content)
                 # if not both, send 301 moved perm request. 
                 else:
-                    self.request.sendall("HTTP/1.1 301 Moved Permanently\r\n".encode())
                     path += '/'
-                    self.request.sendall(('Location: http://127.0.0.1:8080' + self.data.split()[1] + '\n' ).encode())  
+                    self.request.sendall(bytearray('HTTP/1.1 301 Moved Permanently\r\n'+"Content-Type: text/plain\r\nLocation: {0}\r\n\r\n".format(path),"utf-8"))  
             # if the path does not exist, send 404 file not found error.
             else:
-                self.request.sendall("HTTP/1.1 404 File Not Found\r\n".encode())
+                self.request.sendall(bytearray('HTTP/1.1 404 Not Found\r\n\r\n','utf-8'))
         # if the requested method is not GET, we send 405 not allowed
         else:
             self.request.sendall('HTTP/1.1 405 Method Not Allowed\r\n\r\n'.encode())
